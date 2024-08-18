@@ -1,6 +1,7 @@
 import pygame as pg
 import math
 import random
+from shapely.geometry import Polygon
 
 def sign(num):
     if num == 0:
@@ -106,7 +107,7 @@ class Spaceship():
             pg.draw.line(self.screen, pg.Color(255, 200, 200), (clamp(-50+self.position[0], 0, 1366-100), -50*flip+self.position[1]), 
                      (clamp(-50+self.health+self.damage_taken+self.position[0], 0+self.health+self.damage_taken, 1366-100+self.health+self.damage_taken), -50*flip+self.position[1]), 10)
         pg.draw.line(self.screen, pg.Color(clamp(int(255-self.health*2.55), 0, 255), clamp(int(self.health*2.55), 0, 255), 0), (clamp(-50+self.position[0], 0, 1366-100), -50*flip+self.position[1]), 
-                     (clamp(-50+self.health+self.position[0], self.position[0]-50, 1366-100+self.health), -50*flip+self.position[1]), 10)
+                     (clamp(-50+self.health+self.position[0], self.health, 1366-100+self.health), -50*flip+self.position[1]), 10)
         
         if self.stun > 0:
             charge = []
@@ -123,7 +124,9 @@ class Alpha(Spaceship):
         self.cannon_charge = 0
         self.CANNON_MAX = 50
     def update(self):
-        if not self.stun > 0:
+        if self.stun > 0:
+            self.cannon_charge = 0
+        else:
             self.cannon_charge += 1
         return super().update()
     def shoot(self):
@@ -154,16 +157,17 @@ class Alpha(Spaceship):
 class Beta(Spaceship):
     def __init__(self, starting_coords, starting_angle, color, screen) -> None:
         super().__init__(starting_coords, starting_angle, color, screen, 'hold')
-        self.cannon_cooldown = 10
+        self.cannon_cooldown = 5
+        self.side = 1
     def update(self):
         self.cannon_cooldown = max(self.cannon_cooldown - 1, 0)
         return super().update()
     def shoot(self):
         if self.cannon_cooldown > 0 or self.stun > 0:
             return
-        self.cannon_cooldown = 10
-        self.bullets.append(Bullet(self.position, self.velocity, self.angle, -1, self.screen))
-        self.bullets.append(Bullet(self.position, self.velocity, self.angle, 1, self.screen))
+        self.cannon_cooldown = 5
+        self.bullets.append(Bullet(self.position, self.velocity, self.angle, self.side, self.screen))
+        self.side *= -1
     def draw(self):
         ship = [[-30, 10], [-15, 17], [4, 12], [-15, 6], [15, 2], [20, 6], [30, 2], [30, -2], [20, -6], [15, -2], [-15, -6], [4, -12], [-15, -17], [-30, -10], [-20, 0]]
         draw_on_ship(ship, self.angle, self.position, self.color, self.screen)
@@ -174,21 +178,42 @@ class Beta(Spaceship):
             self.fire = False
         return super().draw_health()
 class Gamma(Spaceship):
-    def __init__(self, starting_coords, starting_angle, color, screen, shooting_type) -> None:
-        super().__init__(starting_coords, starting_angle, color, screen, shooting_type)
+    def __init__(self, starting_coords, starting_angle, color, screen) -> None:
+        super().__init__(starting_coords, starting_angle, color, screen, 'hold')
         self.charge = 0
-        self.max_charge = 100
+        self.max_charge = 200
+
     def update(self):
         if self.stun > 0:
-            return
-        self.charge = min(self.max_charge, self.charge + 1)
+            self.bullets = []
+            self.charge = 0
+        if len(self.bullets):
+            self.bullets[0].position = self.position
+            self.bullets[0].angle = self.angle
+            self.charge -= 1
+        else:
+            self.charge = min(self.max_charge, self.charge + 2)
+        if self.charge == 0:
+            self.bullets = []
+        super().update()
+
     def shoot(self):
-        if self.charge < self.max_charge or self.stun > 0:
+        if self.stun > 0:
             return
+        if self.charge == self.max_charge:
+            self.bullets = [Laser(self.position, self.angle, self.screen)]
+
+    def draw(self):
+        pg.draw.circle(self.screen, self.color, self.position, 10)
         
-
-
-
+        flip = 1 if self.position[1] > 55 else -1
+        pg.draw.line(self.screen, '#555555', (clamp(-50+self.position[0], 0, 1366-100), -75*flip+self.position[1]), 
+                     (clamp(50+self.position[0], 100, 1366), -75*flip+self.position[1]), 10)
+        if self.charge > 0:
+            cp = int(self.charge / self.max_charge * 100)
+            pg.draw.line(self.screen, 'red', (clamp(-50+self.position[0], 0, 1366-100), -75*flip+self.position[1]), 
+                        (clamp(-50+cp+self.position[0], cp, 1366-100+cp), -75*flip+self.position[1]), 10)
+        super().draw_health()
 
 class Charge:
     def __init__(self, position, velocity, angle, screen):
@@ -215,7 +240,6 @@ class Charge:
             pg.Vector2(l*math.cos(self.angle), l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle - math.pi/2), w*math.sin(self.angle - math.pi/2)) + self.position,
             pg.Vector2(-l*math.cos(self.angle), -l*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle + math.pi/2), -w*math.sin(self.angle + math.pi/2)) + self.position,
             pg.Vector2(-l*math.cos(self.angle), -l*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle - math.pi/2), -w*math.sin(self.angle - math.pi/2)) + self.position,
-
         ]
         pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
 
@@ -257,30 +281,55 @@ class Bullet():
         bullet = [[0, 3], [0, -3], [15, 0]]
         draw_on_ship(bullet, self.angle, self.position, 'white', self.screen)
 
+class Laser:
+    def __init__(self, position, angle, screen):
+        self.position = position
+        self.angle = angle
+        self.screen = screen
+        self.hitbox = []
+        self.damage = 0.5
+        self.pulse = 0
+        self.flare = 0
+        self.clock = 3600
+    def update(self):
+        self.pulse = self.pulse%math.pi + math.pi/100
+        self.flare += 50
+        self.flare %= 2000
+        self.draw()
+    def draw(self):
+        l = 2000
+        w = 10
+        self.hitbox = [
+            pg.Vector2(l*math.cos(self.angle), l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle + math.pi/2), w*math.sin(self.angle + math.pi/2)) + self.position,
+            pg.Vector2(l*math.cos(self.angle), l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle - math.pi/2), w*math.sin(self.angle - math.pi/2)) + self.position,
+            pg.Vector2(4*math.cos(self.angle), -4*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle + math.pi/2), -w*math.sin(self.angle + math.pi/2)) + self.position,
+            pg.Vector2(4*math.cos(self.angle), -4*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle - math.pi/2), -w*math.sin(self.angle - math.pi/2)) + self.position,
+        ]
+        pg.draw.circle(self.screen, 'red', self.position + pg.Vector2(self.flare*math.cos(self.angle), self.flare*math.sin(self.angle)), 15)
+        nf = (self.flare + 1000)%2000
+        pg.draw.circle(self.screen, 'red', self.position + pg.Vector2(nf*math.cos(self.angle), nf*math.sin(self.angle)), 15)
+        pg.draw.line(self.screen, 'red', self.position, self.position + pg.Vector2(2000*math.cos(self.angle), 2000*math.sin(self.angle)), int(8 * math.sin(self.pulse) + 16))
+        pg.draw.line(self.screen, 'white', self.position, self.position + pg.Vector2(2000*math.cos(self.angle), 2000*math.sin(self.angle)), int(5 * math.sin(self.pulse) + 10))
 
 def checkdamage(ship1: Spaceship, ship2: Spaceship):
     for i in ship1.bullets:
-        if math.dist(i.position, ship2.position) < i.size*7.5 or\
-            math.dist(i.position, ship2.position + pg.Vector2(20*math.cos(ship2.angle), 20*math.sin(ship2.angle))) < i.size*10 or\
-            math.dist(i.position, ship2.position + pg.Vector2(-20*math.cos(ship2.angle), -20*math.sin(ship2.angle))) < i.size*10:
+        hit2 = Polygon(ship2.hitbox)
+        hitb = Polygon(i.hitbox)
+        if hit2.intersects(hitb):
             ship2.health -= i.damage
             ship2.damage_taken += i.damage
             ship2.damage_decay = 30
-            i.clock = 0
-            ship1.bullets.remove(i)
-            if type(i) == Charge:
-                ship2.stun = 20
+            if type(i) != Laser: ship1.bullets.remove(i)
+            if type(i) == Charge: ship2.stun = 20
             return [1, i.damage]
     for i in ship2.bullets:
-        if math.dist(i.position, ship1.position) < i.size*7.5 or\
-            math.dist(i.position, ship1.position + pg.Vector2(20*math.cos(ship1.angle), 20*math.sin(ship1.angle))) < i.size*10 or\
-            math.dist(i.position, ship1.position + pg.Vector2(-20*math.cos(ship1.angle), -20*math.sin(ship1.angle))) < i.size*10:
+        hit1 = Polygon(ship1.hitbox)
+        hitb = Polygon(i.hitbox)
+        if hit1.intersects(hitb):
             ship1.health -= i.damage
             ship1.damage_taken += i.damage
             ship1.damage_decay = 30
-            i.clock = 0
-            ship2.bullets.remove(i)
-            if type(i) == Charge:
-                ship1.stun = 20
+            if type(i) != Laser: ship2.bullets.remove(i)
+            if type(i) == Charge: ship1.stun = 20
             return [0, i.damage]
     return [-1, -1]

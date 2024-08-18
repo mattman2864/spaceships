@@ -143,9 +143,11 @@ while running != 'QUIT':
             if pg.key.get_pressed()[pg.K_s]:
                 if ship1.shooting_type == 'hold':
                     ship1.shoot()
+            elif type(ship1) == spaceships.Gamma: ship1.bullets = []
             if pg.key.get_pressed()[pg.K_DOWN]:
                 if ship2.shooting_type == 'hold':
                     ship2.shoot()
+            elif type(ship2) == spaceships.Gamma: ship2.bullets = []
             
             # Left ship controls
             if pg.key.get_pressed()[pg.K_w]:
@@ -218,7 +220,7 @@ while running != 'QUIT':
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_SPACE:
                         running = 'SELECT'
-                        ship_choices = [spaceships.Alpha, spaceships.Beta]
+                        ship_choices = [spaceships.Alpha, spaceships.Beta, spaceships.Gamma]
                         chosen = [0, 0]
                         ready = [0, 0]
                     if event.key == pg.K_q:
