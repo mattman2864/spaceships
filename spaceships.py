@@ -192,7 +192,7 @@ class Gamma(Spaceship):
             self.bullets[0].angle = self.angle
             self.charge -= 1
         else:
-            self.charge = min(self.max_charge, self.charge + 2)
+            self.charge = min(self.max_charge, self.charge + 1)
         if self.charge == 0:
             self.bullets = []
         super().update()
@@ -225,7 +225,7 @@ class Charge:
         self.clock = 100
         self.maxclock = self.clock
         self.size = 1
-        self.damage = self.size * 8
+        self.damage = self.size * 6
     def update(self):
         self.clock -= 1
         self.size += 0.1
@@ -287,7 +287,7 @@ class Laser:
         self.angle = angle
         self.screen = screen
         self.hitbox = []
-        self.damage = 0.5
+        self.damage = 0.8
         self.pulse = 0
         self.flare = 0
         self.clock = 3600
@@ -320,7 +320,7 @@ def checkdamage(ship1: Spaceship, ship2: Spaceship):
             ship2.damage_taken += i.damage
             ship2.damage_decay = 30
             if type(i) != Laser: ship1.bullets.remove(i)
-            if type(i) == Charge: ship2.stun = 20
+            if type(i) == Charge: ship2.stun = 30
             return [1, i.damage]
     for i in ship2.bullets:
         hit1 = Polygon(ship1.hitbox)
@@ -330,6 +330,6 @@ def checkdamage(ship1: Spaceship, ship2: Spaceship):
             ship1.damage_taken += i.damage
             ship1.damage_decay = 30
             if type(i) != Laser: ship2.bullets.remove(i)
-            if type(i) == Charge: ship1.stun = 20
+            if type(i) == Charge: ship1.stun = 30
             return [0, i.damage]
     return [-1, -1]
