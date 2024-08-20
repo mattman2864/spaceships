@@ -3,6 +3,8 @@ import math
 import random
 from shapely.geometry import Polygon
 
+HITBOXES = False
+
 def sign(num):
     if num == 0:
         return 1
@@ -22,9 +24,9 @@ def place_poly(points, center):
         new_points.append((p[0] + center[0], p[1] + center[1]))
     return new_points
 
-def draw_on_ship(points, angle, position, color, screen):
+def draw_on_ship(points, angle, position, color, screen, width = 0):
     adjusted_points = place_poly(rotate_poly(points, angle), position)
-    pg.draw.polygon(screen, color, adjusted_points, width=3)
+    pg.draw.polygon(screen, color, adjusted_points, width = width)
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 
@@ -79,7 +81,7 @@ class Spaceship():
             pg.Vector2(-30*math.cos(self.angle), -30*math.sin(self.angle)) + pg.Vector2(-17*math.cos(self.angle - math.pi/2), -17*math.sin(self.angle - math.pi/2)) + self.position,
 
         ]
-        pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
+        if HITBOXES: pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
         self.velocity[0] *= 0.98
         self.velocity[1] *= 0.98
         self.angular_velocity *= 0.98
@@ -115,7 +117,7 @@ class Spaceship():
             for i in range(detail):
                 mult = random.randint(2, 30)
                 charge.append((mult*math.cos(i*math.pi/detail*2), mult*math.sin(i*math.pi/detail*2)))
-            draw_on_ship(charge, self.angle, self.position, 'yellow', self.screen)
+            draw_on_ship(charge, self.angle, self.position, 'yellow', self.screen, 4)
 
         
 class Alpha(Spaceship):
@@ -127,7 +129,7 @@ class Alpha(Spaceship):
         if self.stun > 0:
             self.cannon_charge = 0
         else:
-            self.cannon_charge += 1
+            self.cannon_charge = min(self.CANNON_MAX, self.cannon_charge + 1)
         return super().update()
     def shoot(self):
         if self.cannon_charge < self.CANNON_MAX or self.stun > 0:
@@ -135,8 +137,8 @@ class Alpha(Spaceship):
         self.bullets.append(Charge(self.position, self.velocity, self.angle, self.screen))
         self.cannon_charge = 0
     def draw(self):
-        ship = [(30, 16), (17, 12), (3, 4), (-3, 4), (-17, 12), (-30, 4), (-25, 0),
-                (-30, -4), (-17, -12), (-3, -4), (3, -4), (17, -12), (30, -16), 
+        ship = [(30, self.cannon_charge/5+8), (17, 12), (3, 4), (-3, 4), (-17, 12), (-30, 4), (-25, 0),
+                (-30, -4), (-17, -12), (-3, -4), (3, -4), (17, -12), (30, -self.cannon_charge/5-8), 
                 (18, -6), (15, 0), (18, 6)]
         draw_on_ship(ship, self.angle, self.position, self.color, self.screen)
 
@@ -146,7 +148,7 @@ class Alpha(Spaceship):
             for i in range(10):
                 mult = random.randint(5, 10) * filled
                 charge.append((mult*math.cos(i*math.pi/5) + 30, mult*math.sin(i*math.pi/5)))
-            draw_on_ship(charge, self.angle, self.position, pg.Color(255, 255, int(255-255*filled)), self.screen)
+            draw_on_ship(charge, self.angle, self.position, pg.Color(255, 255, int(255-255*filled)), self.screen, 4)
 
         if self.fire:        
             fire = [(-30, 4), (-50 + random.randint(-3, 3), random.randint(-3, 3)), (-30, -4), (-25, 0)]
@@ -169,7 +171,9 @@ class Beta(Spaceship):
         self.bullets.append(Bullet(self.position, self.velocity, self.angle, self.side, self.screen))
         self.side *= -1
     def draw(self):
-        ship = [[-30, 10], [-15, 17], [4, 12], [-15, 6], [15, 2], [20, 6], [30, 2], [30, -2], [20, -6], [15, -2], [-15, -6], [4, -12], [-15, -17], [-30, -10], [-20, 0]]
+        left_animation = self.cannon_cooldown*3 if self.side < 0 else 0
+        right_animation = self.cannon_cooldown*3 if self.side > 0 else 0
+        ship = [[-30, 10], [-15, 17], [4+left_animation, 12], [-15, 6], [15, 2], [20, 6], [30, 2], [30, -2], [20, -6], [15, -2], [-15, -6], [4+right_animation, -12], [-15, -17], [-30, -10], [-20, 0]]
         draw_on_ship(ship, self.angle, self.position, self.color, self.screen)
         
         if self.fire:        
@@ -204,8 +208,8 @@ class Gamma(Spaceship):
             self.bullets = [Laser(self.position, self.angle, self.screen)]
 
     def draw(self):
-        pg.draw.circle(self.screen, self.color, self.position, 10)
-        
+        ship = [[5, 0], [10, self.charge/20], [30, self.charge/20], [25, 15], [-30, 20], [-15, 0], [-30, -20], [25, -15], [30, -self.charge/20], [10, -self.charge/20]]
+        draw_on_ship(ship, self.angle, self.position, self.color, self.screen)
         flip = 1 if self.position[1] > 55 else -1
         pg.draw.line(self.screen, '#555555', (clamp(-50+self.position[0], 0, 1366-100), -75*flip+self.position[1]), 
                      (clamp(50+self.position[0], 100, 1366), -75*flip+self.position[1]), 10)
@@ -241,7 +245,7 @@ class Charge:
             pg.Vector2(-l*math.cos(self.angle), -l*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle + math.pi/2), -w*math.sin(self.angle + math.pi/2)) + self.position,
             pg.Vector2(-l*math.cos(self.angle), -l*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle - math.pi/2), -w*math.sin(self.angle - math.pi/2)) + self.position,
         ]
-        pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
+        if HITBOXES: pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
 
     def draw(self):
         charge = []
@@ -249,7 +253,7 @@ class Charge:
         for i in range(detail):
             mult = random.randint(5, 10) * self.size
             charge.append((mult*math.cos(i*math.pi/detail*2), mult*math.sin(i*math.pi/detail*2)))
-        draw_on_ship(charge, self.angle, self.position, 'yellow', self.screen)
+        draw_on_ship(charge, self.angle, self.position, 'yellow', self.screen, 4)
 
 class Bullet():
     def __init__(self, position, velocity, angle, side, screen):
@@ -276,7 +280,7 @@ class Bullet():
             pg.Vector2(-l*math.cos(self.angle), -l*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle - math.pi/2), -w*math.sin(self.angle - math.pi/2)) + self.position,
 
         ]
-        pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
+        if HITBOXES: pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
     def draw(self):
         bullet = [[0, 3], [0, -3], [15, 0]]
         draw_on_ship(bullet, self.angle, self.position, 'white', self.screen)
