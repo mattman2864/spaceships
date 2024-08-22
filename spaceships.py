@@ -63,8 +63,8 @@ class Spaceship():
     def fly_turn(self, dir):
         if self.stun > 0:
             return
-        MAX_ANG_VEL = 0.05
-        accel = 0.002
+        MAX_ANG_VEL = 0.08
+        accel = 0.004
         self.angular_velocity += accel * dir
         if abs(self.angular_velocity) > MAX_ANG_VEL:
             self.angular_velocity = MAX_ANG_VEL * dir
@@ -84,7 +84,7 @@ class Spaceship():
         if HITBOXES: pg.draw.polygon(self.screen, 'green', self.hitbox, 3)
         self.velocity[0] *= 0.98
         self.velocity[1] *= 0.98
-        self.angular_velocity *= 0.98
+        self.angular_velocity *= 0.90
         if abs(self.angular_velocity) < 0.0001:
             self.angular_velocity = 0
         if abs(self.velocity[0]) < 0.001:
@@ -159,7 +159,7 @@ class Alpha(Spaceship):
 class Beta(Spaceship):
     def __init__(self, starting_coords, starting_angle, color, screen) -> None:
         super().__init__(starting_coords, starting_angle, color, screen, 'hold')
-        self.cannon_cooldown = 5
+        self.cannon_cooldown = 0
         self.side = 1
     def update(self):
         self.cannon_cooldown = max(self.cannon_cooldown - 1, 0)
@@ -175,7 +175,6 @@ class Beta(Spaceship):
         right_animation = self.cannon_cooldown*3 if self.side > 0 else 0
         ship = [[-30, 10], [-15, 17], [4+left_animation, 12], [-15, 6], [15, 2], [20, 6], [30, 2], [30, -2], [20, -6], [15, -2], [-15, -6], [4+right_animation, -12], [-15, -17], [-30, -10], [-20, 0]]
         draw_on_ship(ship, self.angle, self.position, self.color, self.screen)
-        
         if self.fire:        
             fire = [(-25, -5), (-50 + random.randint(-3, 3), random.randint(-3, 3)), (-25, 5), (-20, 0)]
             draw_on_ship(fire, self.angle, self.position, 'orange', self.screen)
@@ -208,7 +207,14 @@ class Gamma(Spaceship):
             self.bullets = [Laser(self.position, self.angle, self.screen)]
 
     def draw(self):
-        ship = [[5, 0], [10, self.charge/20], [30, self.charge/20], [25, 15], [-30, 20], [-15, 0], [-30, -20], [25, -15], [30, -self.charge/20], [10, -self.charge/20]]
+        if self.fire:        
+            fire1 = [(-20, 5), (-47 + random.randint(-3, 3), random.randint(6, 14)), (-20, 15), (-16, 10)]
+            fire2 = [(-20, -5), (-47 + random.randint(-3, 3), random.randint(-14, -6)), (-20, -15), (-16, -10)]
+            draw_on_ship(fire1, self.angle, self.position, 'orange', self.screen)
+            draw_on_ship(fire2, self.angle, self.position, 'orange', self.screen)
+            self.fire = False
+
+        ship = [[0, 0], [5, self.charge/20], [30, self.charge/20], [25, 15], [-30, 20], [-15, 10], [-25, 0], [-15, -10], [-30, -20], [25, -15], [30, -self.charge/20], [5, -self.charge/20]]
         draw_on_ship(ship, self.angle, self.position, self.color, self.screen)
         flip = 1 if self.position[1] > 55 else -1
         pg.draw.line(self.screen, '#555555', (clamp(-50+self.position[0], 0, 1366-100), -75*flip+self.position[1]), 
@@ -217,6 +223,7 @@ class Gamma(Spaceship):
             cp = int(self.charge / self.max_charge * 100)
             pg.draw.line(self.screen, 'red', (clamp(-50+self.position[0], 0, 1366-100), -75*flip+self.position[1]), 
                         (clamp(-50+cp+self.position[0], cp, 1366-100+cp), -75*flip+self.position[1]), 10)
+        
         super().draw_health()
 
 class Charge:
@@ -229,11 +236,11 @@ class Charge:
         self.clock = 100
         self.maxclock = self.clock
         self.size = 1
-        self.damage = self.size * 6
+        self.damage = self.size * 5
     def update(self):
         self.clock -= 1
         self.size += 0.1
-        self.damage = self.size * 8
+        self.damage = self.size * 5
         self.position[0] += self.velocity[0]
         self.position[1] += self.velocity[1]
         self.draw()
@@ -264,7 +271,7 @@ class Bullet():
         self.screen = screen
         self.clock = 100
         self.maxclock = self.clock
-        self.damage = 2
+        self.damage = 3
         self.size = 2
     def update(self):
         self.clock -= 1
@@ -295,26 +302,28 @@ class Laser:
         self.pulse = 0
         self.flare = 0
         self.clock = 3600
+        self.l = 2000
     def update(self):
         self.pulse = self.pulse%math.pi + math.pi/100
         self.flare += 50
-        self.flare %= 2000
+        self.flare %= self.l
         self.draw()
     def draw(self):
-        l = 2000
         w = 10
         self.hitbox = [
-            pg.Vector2(l*math.cos(self.angle), l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle + math.pi/2), w*math.sin(self.angle + math.pi/2)) + self.position,
-            pg.Vector2(l*math.cos(self.angle), l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle - math.pi/2), w*math.sin(self.angle - math.pi/2)) + self.position,
+            pg.Vector2(self.l*math.cos(self.angle), self.l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle + math.pi/2), w*math.sin(self.angle + math.pi/2)) + self.position,
+            pg.Vector2(self.l*math.cos(self.angle), self.l*math.sin(self.angle)) + pg.Vector2(w*math.cos(self.angle - math.pi/2), w*math.sin(self.angle - math.pi/2)) + self.position,
             pg.Vector2(4*math.cos(self.angle), -4*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle + math.pi/2), -w*math.sin(self.angle + math.pi/2)) + self.position,
             pg.Vector2(4*math.cos(self.angle), -4*math.sin(self.angle)) + pg.Vector2(-w*math.cos(self.angle - math.pi/2), -w*math.sin(self.angle - math.pi/2)) + self.position,
         ]
         pg.draw.circle(self.screen, 'red', self.position + pg.Vector2(self.flare*math.cos(self.angle), self.flare*math.sin(self.angle)), 15)
-        nf = (self.flare + 1000)%2000
+        nf = (self.flare + 1000)%self.l
+        pg.draw.circle(self.screen, 'red', self.position + pg.Vector2(self.l*math.cos(self.angle), self.l*math.sin(self.angle)), 25)
         pg.draw.circle(self.screen, 'red', self.position + pg.Vector2(nf*math.cos(self.angle), nf*math.sin(self.angle)), 15)
-        pg.draw.line(self.screen, 'red', self.position, self.position + pg.Vector2(2000*math.cos(self.angle), 2000*math.sin(self.angle)), int(8 * math.sin(self.pulse) + 16))
-        pg.draw.line(self.screen, 'white', self.position, self.position + pg.Vector2(2000*math.cos(self.angle), 2000*math.sin(self.angle)), int(5 * math.sin(self.pulse) + 10))
-
+        pg.draw.line(self.screen, 'red', self.position, self.position + pg.Vector2(self.l*math.cos(self.angle), self.l*math.sin(self.angle)), int(8 * math.sin(self.pulse) + 16))
+        pg.draw.circle(self.screen, 'white', self.position + pg.Vector2(self.l*math.cos(self.angle), self.l*math.sin(self.angle)), 15)
+        pg.draw.line(self.screen, 'white', self.position, self.position + pg.Vector2(self.l*math.cos(self.angle), self.l*math.sin(self.angle)), int(5 * math.sin(self.pulse) + 10))
+        self.l = 2000
 def checkdamage(ship1: Spaceship, ship2: Spaceship):
     for i in ship1.bullets:
         hit2 = Polygon(ship2.hitbox)
@@ -324,7 +333,8 @@ def checkdamage(ship1: Spaceship, ship2: Spaceship):
             ship2.damage_taken += i.damage
             ship2.damage_decay = 30
             if type(i) != Laser: ship1.bullets.remove(i)
-            if type(i) == Charge: ship2.stun = 30
+            else: i.l = math.dist(ship1.position, ship2.position)
+            if type(i) == Charge: ship2.stun = 20
             return [1, i.damage]
     for i in ship2.bullets:
         hit1 = Polygon(ship1.hitbox)
@@ -334,6 +344,7 @@ def checkdamage(ship1: Spaceship, ship2: Spaceship):
             ship1.damage_taken += i.damage
             ship1.damage_decay = 30
             if type(i) != Laser: ship2.bullets.remove(i)
-            if type(i) == Charge: ship1.stun = 30
+            else: i.l = math.dist(ship1.position, ship2.position)
+            if type(i) == Charge: ship1.stun = 20
             return [0, i.damage]
     return [-1, -1]

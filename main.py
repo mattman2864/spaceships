@@ -200,12 +200,10 @@ while running != 'QUIT':
                     running = 'QUIT'
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_y:
-                        running = 'GAME'
-                        ship1 = ship_choices[chosen[0]]((200, 359), 0, 'red', screen)
-                        ship2 = ship_choices[chosen[1]]((1366-200, 359), -math.pi, 'blue', screen)
-                        damage_accumulator = [0, 0]
-                        cooldown = [0, 0]
                         click_sound.play()
+                        running = 'SELECT'
+                        ship_choices = [spaceships.Alpha, spaceships.Beta, spaceships.Gamma]
+                        ready = [0, 0]
                     if event.key == pg.K_n:
                         running = 'QUIT'
 
