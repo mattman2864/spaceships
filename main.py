@@ -14,10 +14,6 @@ pg.init()
 screen = pg.display.set_mode(RESOLUTION)
 clock = pg.time.Clock()
 
-# Initializing sounds
-ready_sound = pg.mixer.Sound('ready.mp3')
-click_sound = pg.mixer.Sound('click.mp3')
-
 # Custom font template using coordingates. Must be in a 8x16 box
 LETTERS = {'a':[[0, 16], [4, 0], [8, 16], [6, 8], [2, 8]],
            'b':[[0, 16], [0, 0], [6, 4], [0, 8], [6, 12], [0, 16]],
@@ -200,7 +196,6 @@ while running != 'QUIT':
                     running = 'QUIT'
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_y:
-                        click_sound.play()
                         running = 'SELECT'
                         ship_choices = [spaceships.Alpha, spaceships.Beta, spaceships.Gamma]
                         ready = [0, 0]
@@ -222,7 +217,6 @@ while running != 'QUIT':
                     running = 'QUIT'
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_SPACE:
-                        click_sound.play()
                         running = 'SELECT'
                         ship_choices = [spaceships.Alpha, spaceships.Beta, spaceships.Gamma]
                         chosen = [0, 0]
@@ -243,7 +237,6 @@ while running != 'QUIT':
                     running = 'QUIT'
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_SPACE and ready[0] and ready[1]:
-                        click_sound.play()
                         running = 'GAME'
                         ship1 = ship_choices[chosen[0]]((200, 359), 0, 'red', screen)
                         ship2 = ship_choices[chosen[1]]((1366-200, 359), -math.pi, 'blue', screen)
@@ -252,23 +245,17 @@ while running != 'QUIT':
                     if not ready[0]:
                         if event.key == pg.K_a:
                             chosen[0] = (chosen[0]-1)%len(ship_choices)
-                            click_sound.play()
                         if event.key == pg.K_d:
                             chosen[0] = (chosen[0]+1)%len(ship_choices)
-                            click_sound.play()
                     if not ready[1]:
                         if event.key == pg.K_LEFT:
                             chosen[1] = (chosen[1]-1)%len(ship_choices)
-                            click_sound.play()
                         if event.key == pg.K_RIGHT:
                             chosen[1] = (chosen[1]+1)%len(ship_choices)
-                            click_sound.play()
                     if event.key == pg.K_s:
                         ready[0] = 1
-                        ready_sound.play()
                     if event.key == pg.K_DOWN:
                         ready[1] = 1
-                        ready_sound.play()
 
             # Draw sky
             screen.fill('black')

@@ -344,7 +344,8 @@ def checkdamage(ship1: Spaceship, ship2: Spaceship):
             ship1.damage_taken += i.damage
             ship1.damage_decay = 30
             if type(i) != Laser: ship2.bullets.remove(i)
-            else: i.l = math.dist(ship1.position, ship2.position)
+            else:
+                i.l = math.dist(ship1.position, ship2.position)
             if type(i) == Charge: ship1.stun = 20
             return [0, i.damage]
     return [-1, -1]
